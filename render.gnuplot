@@ -8,5 +8,6 @@ set key box
 plot "sha.dat" using 1:2 title "SHA-1", \
 	"sha_xor.dat" using 1:2 title "SHA-1 XOR", \
 	"crc.dat" using 1:2 title "CRC32", \
-	"adler.dat" using 1:2 title "adler32"
+	"adler.dat" using 1:2 title "adler32", \
+	"murmur3.dat" using 1:2 title "murmur3"
 

@@ -4,6 +4,14 @@
 #include <zlib.h>
 
 #include "trie.hpp"
+#include "MurmurHash3.h"
+
+uint32_t murmur3(uint32_t input)
+{
+	uint32_t ret;
+	MurmurHash3_x86_32(&input, 4, 0, &ret);
+	return ret;
+}
 
 uint32_t sha(uint32_t input)
 {
@@ -102,6 +110,7 @@ int main(int argc, char const* argv[])
 	pool.emplace_back([](){for_each_input(sha_xor, "sha_xor.dat"); } );
 	pool.emplace_back([](){for_each_input(crc, "crc.dat"); } );
 	pool.emplace_back([](){for_each_input(adler, "adler.dat"); } );
+	pool.emplace_back([](){for_each_input(murmur3, "murmur3.dat"); } );
 
 	for (auto& t : pool)
 		t.join();
