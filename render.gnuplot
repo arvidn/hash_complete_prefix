@@ -1,7 +1,9 @@
-set term png size 1200,700
+set term png small size 800,500
 set output "complete_bit_prefixes.png"
+set grid
 set xrange [1:*]
 set logscale x
+set ytics 1
 set xtics 8
 set xlabel "number of (valid) input values"
 set ylabel "output complete bit prefix (bits)"
@@ -16,6 +18,8 @@ set nologscale x
 set output "hash_distribution.png"
 set xrange [0:*]
 set yrange [0:*]
+set xtics 50
+set ytics autofreq
 set xlabel "bucket"
 set ylabel "number of results"
 set style data steps
