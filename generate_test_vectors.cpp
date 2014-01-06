@@ -44,7 +44,7 @@ void gen_node_id(uint8_t rand, uint8_t* ip, int num_octets)
 int main()
 {
 	uint8_t ip1[] = {124, 31, 75, 21};
-	uint8_t ip2[] = {21, 75, 31, 125};
+	uint8_t ip2[] = {21, 75, 31, 124};
 	uint8_t ip3[] = {65, 23, 51, 170};
 	uint8_t ip4[] = {84, 124, 73, 14};
 	uint8_t ip5[] = {43, 213, 53, 83};
