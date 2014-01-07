@@ -26,3 +26,13 @@ set style data steps
 
 plot "sha-dist.dat" using 1:2 title "SHA-1", \
 	"crc-dist.dat" using 1:2 title "CRC32"
+
+set output "hash_distribution_class_C.png"
+plot "crc1-dist.dat" using 1:2 title "CRC32 /24"
+
+set output "hash_distribution_class_B.png"
+plot "crc2-dist.dat" using 1:2 title "CRC32 /16"
+
+set output "hash_distribution_class_A.png"
+plot "crc3-dist.dat" using 1:2 title "CRC32 /8"
+

@@ -63,7 +63,6 @@ void for_each_input(F fun, P predicate, char const* filename)
 		// zero will be masked into the versions with zeros
 		// anyway, and we might as well only run the hash function
 		// once, instead of for each duplicate.
-//		if ((i & ~0x01071f7f) != 0) continue;
 		if ((i & ~0x030f3fff) != 0) continue;
 
 		uint32_t input = htonl(i);
@@ -145,7 +144,6 @@ void chi_square_distribution(F fun, P predicate, uint64_t* buckets
 		if (!predicate(i)) continue;
 
 		uint32_t input = htonl(i & 0x030f3fff);
-//		uint32_t input = htonl(i & 0x01071f7f);
 
 		for (int r = 0; r < 8; ++r)
 		{
@@ -165,9 +163,12 @@ void print_results(uint64_t* buckets1, uint64_t* buckets2
 
 	for (int i = 0; i < num_buckets; ++i)
 	{
-		buckets1[i] += buckets2[i];
-		buckets1[i] += buckets3[i];
-		buckets1[i] += buckets4[i];
+		if (buckets2)
+			buckets1[i] += buckets2[i];
+		if (buckets3)
+			buckets1[i] += buckets3[i];
+		if (buckets4)
+			buckets1[i] += buckets4[i];
 		num_samples += buckets1[i];
 		fprintf(fout, "%d\t%lld\n", i, buckets1[i]);
 	}
@@ -230,6 +231,17 @@ int main(int argc, char const* argv[])
 	pool.emplace_back([&](){chi_square_distribution(crc, mask, buckets2, 0x40000000, 0x80000000); } );
 	pool.emplace_back([&](){chi_square_distribution(crc, mask, buckets3, 0x80000000, 0xC0000000); } );
 	pool.emplace_back([&](){chi_square_distribution(crc, mask, buckets4, 0xC0000000, 0x100000000); } );
+
+	uint64_t buckets9[num_buckets];
+	uint64_t buckets10[num_buckets];
+	uint64_t buckets11[num_buckets];
+	memset(buckets9, 0, sizeof(buckets9));
+	chi_square_distribution(crc, mask, buckets9, 0x35353500, 0x35353600);
+	print_results(buckets9, nullptr, nullptr, nullptr, "crc1-dist.dat");
+	chi_square_distribution(crc, mask, buckets9, 0x35353600, 0x35360000);
+	print_results(buckets9, nullptr, nullptr, nullptr, "crc2-dist.dat");
+	chi_square_distribution(crc, mask, buckets9, 0x35360000, 0x36000000);
+	print_results(buckets9, nullptr, nullptr, nullptr, "crc3-dist.dat");
 
 	for (auto& t : pool)
 		t.join();
