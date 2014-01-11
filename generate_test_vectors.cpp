@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstdio>
-#include <zlib.h>
+#include "crc32c.h"
 
 using std::uint8_t;
 using std::uint32_t;
@@ -20,10 +20,10 @@ void gen_node_id(uint8_t rand, uint8_t* ip, int num_octets)
 		ip[i] &= mask[i];
 
 	uint8_t r = rand & 0x7;
+	ip[0] |= r << 5;
 
-	uint32_t crc = crc32(0, nullptr, 0);
-	crc = crc32(crc, ip, num_octets);
-	crc = crc32(crc, &r, 1);
+	uint32_t crc = 0;
+	crc = crc32c_sw(crc, ip, num_octets);
 
 	// only take the top 21 bits from crc
 	node_id[0] = (crc >> 24) & 0xff;
@@ -43,6 +43,8 @@ void gen_node_id(uint8_t rand, uint8_t* ip, int num_octets)
 
 int main()
 {
+	crc32c_init_sw();
+
 	uint8_t ip1[] = {124, 31, 75, 21};
 	uint8_t ip2[] = {21, 75, 31, 124};
 	uint8_t ip3[] = {65, 23, 51, 170};

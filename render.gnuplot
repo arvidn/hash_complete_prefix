@@ -10,7 +10,7 @@ set ylabel "output complete bit prefix (bits)"
 set style data lines
 set key box
 plot "sha.dat" using 1:2 title "SHA-1", \
-	"crc.dat" using 1:2 title "CRC32", \
+	"crc32c.dat" using 1:2 title "CRC32C", \
 	"adler.dat" using 1:2 title "adler32", \
 	"murmur3.dat" using 1:2 title "murmur3"
 
@@ -25,14 +25,14 @@ set ylabel "number of results"
 set style data steps
 
 plot "sha-dist.dat" using 1:2 title "SHA-1", \
-	"crc-dist.dat" using 1:2 title "CRC32"
+	"crc32c-dist.dat" using 1:2 title "CRC32C"
 
 set output "hash_distribution_class_C.png"
-plot "crc1-dist.dat" using 1:2 title "CRC32 /24"
+plot "crc32c1-dist.dat" using 1:2 title "CRC32C /24"
 
 set output "hash_distribution_class_B.png"
-plot "crc2-dist.dat" using 1:2 title "CRC32 /16"
+plot "crc32c2-dist.dat" using 1:2 title "CRC32C /16"
 
 set output "hash_distribution_class_A.png"
-plot "crc3-dist.dat" using 1:2 title "CRC32 /8"
+plot "crc32c3-dist.dat" using 1:2 title "CRC32C /8"
 

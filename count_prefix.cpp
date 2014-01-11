@@ -1,6 +1,7 @@
 #include <openssl/sha.h>
 #include <mutex>
 #include <thread>
+#include "crc32c.h"
 #include <zlib.h>
 
 #include "trie.hpp"
@@ -8,39 +9,32 @@
 
 const int num_buckets = 1000;
 
-uint32_t murmur3(uint32_t input, char r)
+uint32_t murmur3(uint32_t input)
 {
 	uint32_t ret;
-	char buf[5];
-	memcpy(buf, &input, 4);
-	buf[4] = r;
-	MurmurHash3_x86_32(buf, 5, 0, &ret);
+	MurmurHash3_x86_32(&input, 4, 0, &ret);
 	return ret;
 }
 
-uint32_t sha(uint32_t input, char r)
+uint32_t sha(uint32_t input)
 {
 	SHA_CTX ctx;
 	SHA_Init(&ctx);
 	SHA_Update(&ctx, &input, 4);
-	SHA_Update(&ctx, &r, 1);
 	uint32_t digest[5];
 	SHA_Final((unsigned char*)digest, &ctx);
 	return digest[0];
 }
 
-uint32_t crc(uint32_t input, char r)
+uint32_t crc32c(uint32_t input)
 {
-	uint32_t out = crc32(0L, Z_NULL, 0);
-	out = crc32(out, (const Bytef*)&input, 4);
-	return crc32(out, (const Bytef*)&r, 1);
+	return crc32c_sw(0, &input, 4);
 }
 
-uint32_t adler(uint32_t input, char r)
+uint32_t adler(uint32_t input)
 {
 	uint32_t out = adler32(0L, Z_NULL, 0);
-	out = adler32(out, (const Bytef*)&input, 4);
-	return adler32(out, (const Bytef*)&r, 1);
+	return adler32(out, (const Bytef*)&input, 4);
 }
 
 template <class F, class P>
@@ -68,7 +62,10 @@ void for_each_input(F fun, P predicate, char const* filename)
 		uint32_t input = htonl(i);
 		for (int r = 0; r < 8; ++r)
 		{
-			uint32_t output = fun(input, r);
+			input &= htonl(~0xe0000000);
+			input |= htonl(r << 29);
+			uint32_t output = fun(input);
+
 			out_values.insert(output);
 
 			++num_ips;
@@ -147,7 +144,9 @@ void chi_square_distribution(F fun, P predicate, uint64_t* buckets
 
 		for (int r = 0; r < 8; ++r)
 		{
-			uint64_t output = fun(input, r);
+			input &= htonl(~0xe0000000);
+			input |= htonl(r << 29);
+			uint64_t output = fun(input);
 			++buckets[output * num_buckets / 0x100000000LL];
 		}
 	}
@@ -190,17 +189,19 @@ void print_results(uint64_t* buckets1, uint64_t* buckets2
 
 int main(int argc, char const* argv[])
 {
+	crc32c_init_sw();
+
 	std::vector<std::thread> pool;
 
 	// the expensive part of this program is to insert into the trie.
-	// the cost of crc or SHA-1 is negligible in comparison. That's
+	// the cost of crc32c or SHA-1 is negligible in comparison. That's
 	// why it makes most sense to parallelize per trie, rather than
 	// across invocation of the hasher, even though it provides limited
 	// parallelism (4 threads). The alternative would essentially cause
 	// everything to serialize around inserting (which would need to be
 	// mutex protected anyway).
 	pool.emplace_back([](){for_each_input(sha, mask, "sha.dat"); } );
-	pool.emplace_back([](){for_each_input(crc, mask, "crc.dat"); } );
+	pool.emplace_back([](){for_each_input(crc32c, mask, "crc32c.dat"); } );
 	pool.emplace_back([](){for_each_input(adler, mask, "adler.dat"); } );
 	pool.emplace_back([](){for_each_input(murmur3, mask, "murmur3.dat"); } );
 
@@ -227,26 +228,26 @@ int main(int argc, char const* argv[])
 	memset(buckets3, 0, sizeof(buckets3));
 	memset(buckets4, 0, sizeof(buckets4));
 
-	pool.emplace_back([&](){chi_square_distribution(crc, mask, buckets1, 0, 0x40000000); } );
-	pool.emplace_back([&](){chi_square_distribution(crc, mask, buckets2, 0x40000000, 0x80000000); } );
-	pool.emplace_back([&](){chi_square_distribution(crc, mask, buckets3, 0x80000000, 0xC0000000); } );
-	pool.emplace_back([&](){chi_square_distribution(crc, mask, buckets4, 0xC0000000, 0x100000000); } );
+	pool.emplace_back([&](){chi_square_distribution(crc32c, mask, buckets1, 0, 0x40000000); } );
+	pool.emplace_back([&](){chi_square_distribution(crc32c, mask, buckets2, 0x40000000, 0x80000000); } );
+	pool.emplace_back([&](){chi_square_distribution(crc32c, mask, buckets3, 0x80000000, 0xC0000000); } );
+	pool.emplace_back([&](){chi_square_distribution(crc32c, mask, buckets4, 0xC0000000, 0x100000000); } );
 
 	uint64_t buckets9[num_buckets];
 	uint64_t buckets10[num_buckets];
 	uint64_t buckets11[num_buckets];
 	memset(buckets9, 0, sizeof(buckets9));
-	chi_square_distribution(crc, mask, buckets9, 0x35353500, 0x35353600);
-	print_results(buckets9, nullptr, nullptr, nullptr, "crc1-dist.dat");
-	chi_square_distribution(crc, mask, buckets9, 0x35353600, 0x35360000);
-	print_results(buckets9, nullptr, nullptr, nullptr, "crc2-dist.dat");
-	chi_square_distribution(crc, mask, buckets9, 0x35360000, 0x36000000);
-	print_results(buckets9, nullptr, nullptr, nullptr, "crc3-dist.dat");
+	chi_square_distribution(crc32c, mask, buckets9, 0x35353500, 0x35353600);
+	print_results(buckets9, nullptr, nullptr, nullptr, "crc32c1-dist.dat");
+	chi_square_distribution(crc32c, mask, buckets9, 0x35353600, 0x35360000);
+	print_results(buckets9, nullptr, nullptr, nullptr, "crc32c2-dist.dat");
+	chi_square_distribution(crc32c, mask, buckets9, 0x35360000, 0x36000000);
+	print_results(buckets9, nullptr, nullptr, nullptr, "crc32c3-dist.dat");
 
 	for (auto& t : pool)
 		t.join();
 
-	print_results(buckets1, buckets2, buckets3, buckets4, "crc-dist.dat");
+	print_results(buckets1, buckets2, buckets3, buckets4, "crc32c-dist.dat");
 	print_results(buckets5, buckets6, buckets7, buckets8, "sha-dist.dat");
 }
 
