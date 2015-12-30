@@ -36,3 +36,10 @@ plot "crc32c2-dist.dat" using 1:2 title "CRC32C /16"
 set output "hash_distribution_class_A.png"
 plot "crc32c3-dist.dat" using 1:2 title "CRC32C /8"
 
+set output "bucket-distribution.png"
+plot "crc32-distribution.dat" using 1:2 title "crc32 DHT routing table bucket distribution", \
+	"sha1-distribution.dat" using 1:2 title "sha1 DHT routing table bucket distribution", \
+	"adler-distribution.dat" using 1:2 title "adler DHT routing table bucket distribution", \
+	"murmur-distribution.dat" using 1:2 title "murmur DHT routing table bucket distribution", \
+	"murmur-ref-distribution.dat" using 1:2 title "bucket distribution of IPs"
+
